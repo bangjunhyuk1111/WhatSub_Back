@@ -1,0 +1,7 @@
+# node_modules/
+
+# .husky/_
+
+# .env 
+
+# 주석처리 제거해야함
