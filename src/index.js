@@ -45,16 +45,6 @@ app.use((req, res, next) => {
     next(error);
   });
   
-// 데이터베이스 연결 테스트
-app.get('/test-db', async (req, res) => {
-  try {
-    const [rows] = await db.query('SELECT NOW()');
-    res.json({ message: 'Database connected', time: rows[0]['NOW()'] });
-  } catch (error) {
-    res.status(500).json({ message: 'Database connection failed', error: error.message });
-  }
-});
-
 // 서버 시작
 const port = 3000;
 app.listen(port, () => {
