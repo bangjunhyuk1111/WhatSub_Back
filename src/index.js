@@ -11,7 +11,9 @@ dotenv.config();
 const db = require('../config/database.js');
 
 // 라우터 선언 
-
+const graphRoutes = require('./routes/graph-route');
+const shortestPathRoute = require('./routes/shortest-path-route');
+const cheapestPathRoutes = require('./routes/cheapest-path-route');
 
 // Express 앱 설정
 const app = express();
@@ -36,7 +38,13 @@ app.use(express.urlencoded({ extended: false }));
 
 
 //라우터
+app.get('/', async (req, res) => {
+  res.send('라우터 작동함')
+})
 
+app.use('/graph', graphRoutes);
+app.use('/shortest-path', shortestPathRoute);
+app.use('/cheapest-path', cheapestPathRoutes);
 
 // 404 에러 처리 미들웨어
 app.use((req, res, next) => {
@@ -44,7 +52,7 @@ app.use((req, res, next) => {
     error.status = 404;
     next(error);
   });
-  
+
 // 서버 시작
 const port = 3000;
 app.listen(port, () => {
