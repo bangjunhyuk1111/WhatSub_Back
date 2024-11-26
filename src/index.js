@@ -14,6 +14,7 @@ const db = require('../config/database.js');
 const graphRoutes = require('./routes/graph-route');
 const shortestPathRoute = require('./routes/shortest-path-route');
 const cheapestPathRoutes = require('./routes/cheapest-path-route');
+const leastTransfersRoutes = require('./routes/least-transfers-route');
 
 // Express 앱 설정
 const app = express();
@@ -45,6 +46,7 @@ app.get('/', async (req, res) => {
 app.use('/graph', graphRoutes);
 app.use('/shortest-path', shortestPathRoute);
 app.use('/cheapest-path', cheapestPathRoutes);
+app.use('/least-transfers-path', leastTransfersRoutes);
 
 // 404 에러 처리 미들웨어
 app.use((req, res, next) => {
