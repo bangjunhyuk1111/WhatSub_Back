@@ -16,4 +16,14 @@ const pool = mysql.createPool({
   queueLimit: 0, // getConnection에서 오류가 발생하기 전에 Pool에 대기할 요청의 개수 한도
 });
 
+//연결 확인
+pool.getConnection()
+  .then(conn => {
+    console.log('Connected to the database');
+    conn.release();
+  })
+  .catch(err => {
+    console.error('Database connection failed:', err.stack);
+  });
+
 module.exports = pool;
