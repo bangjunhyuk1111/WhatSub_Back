@@ -3,11 +3,6 @@ const LeastTransfersController = require('../controllers/least-transfers-control
 
 const router = express.Router();
 
-/**
- * Route: Get the path with the least transfers
- * Method: GET
- * URL: /least-transfers-path
- */
-router.get('/', LeastTransfersController.getLeastTransfersPath);
+router.get('/', LeastTransfersController.getLeastTransfersPaths);
 
 module.exports = router;

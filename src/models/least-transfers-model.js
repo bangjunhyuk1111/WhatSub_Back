@@ -14,7 +14,7 @@ class LeastTransfersModel {
     try {
       const graphModel = new GraphModel();
       this.graph = await graphModel.buildGraph();
-      console.log('✅ Graph successfully built.');
+      console.log('✅ Graph successfully built with bidirectional edges.');
       return this.graph;
     } catch (error) {
       console.error('❌ Error building graph:', error.message);
@@ -22,127 +22,142 @@ class LeastTransfersModel {
     }
   }
 
-  /**
-   * Convert seconds into "X시간 Y분 Z초" or "Y분 Z초"
-   */
   static formatTime(seconds) {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const remainingSeconds = seconds % 60;
-
-    if (hours > 0) {
-      return `${hours}시간 ${minutes}분 ${remainingSeconds}초`;
-    } else {
-      return `${minutes}분 ${remainingSeconds}초`;
-    }
+    return hours > 0
+      ? `${hours}시간 ${minutes}분 ${remainingSeconds}초`
+      : `${minutes}분 ${remainingSeconds}초`;
   }
 
   static formatCost(cost) {
     return `${cost.toLocaleString('ko-KR')}원`;
   }
 
-  async calculateLeastTransfersPath(startStation, endStation) {
+  async calculateLeastTransfersPaths(startStation, endStation) {
     try {
       await this.buildGraph();
 
       const distances = {};
       const transfers = {};
-      const previous = {};
-      const visited = new Set();
+      const paths = {};
       const priorityQueue = [];
+      const visited = new Set();
 
-      Object.keys(this.graph).forEach((node) => {
-        distances[node] = Infinity;
-        transfers[node] = Infinity;
+      // Initialize distances and transfers
+      Object.keys(this.graph).forEach((station) => {
+        distances[station] = Infinity;
+        transfers[station] = Infinity;
+        paths[station] = [];
       });
+
       distances[startStation] = 0;
       transfers[startStation] = 0;
+      paths[startStation] = [];
 
-      priorityQueue.push({ station: startStation, transferCount: 0 });
+      priorityQueue.push({
+        station: startStation,
+        totalTime: 0,
+        totalCost: 0,
+        transferCount: 0,
+        lineNumber: null,
+        path: [],
+      });
 
       while (priorityQueue.length > 0) {
-        priorityQueue.sort((a, b) => a.transferCount - b.transferCount);
-        const { station: currentStation } = priorityQueue.shift();
-
-        if (visited.has(currentStation)) continue;
-        visited.add(currentStation);
-
-        if (currentStation === endStation) break;
-
-        this.graph[currentStation].forEach(({ toNode, timeWeight, costWeight, lineNumber }) => {
-          let isTransfer = 0;
-          if (previous[currentStation]) {
-            if (previous[currentStation].lineNumber !== lineNumber) {
-              isTransfer = 1;
-            }
+        // Sort the priority queue by transfers and then by time
+        priorityQueue.sort((a, b) => {
+          if (a.transferCount === b.transferCount) {
+            return a.totalTime - b.totalTime;
           }
-          const newTransfers = transfers[currentStation] + isTransfer;
-
-          if (
-            newTransfers < transfers[toNode] ||
-            (newTransfers === transfers[toNode] && distances[currentStation] + timeWeight < distances[toNode])
-          ) {
-            distances[toNode] = distances[currentStation] + timeWeight;
-            transfers[toNode] = newTransfers;
-            previous[toNode] = {
-              fromStation: currentStation,
-              lineNumber,
-              timeWeight,
-              costWeight,
-            };
-            priorityQueue.push({ station: toNode, transferCount: newTransfers });
-          }
+          return a.transferCount - b.transferCount;
         });
-      }
 
-      const rawPath = [];
-      let currentStation = endStation;
-      while (currentStation) {
-        const prev = previous[currentStation];
-        if (!prev) break;
-        rawPath.unshift({
-          fromStation: prev.fromStation,
-          toStation: currentStation,
-          lineNumber: prev.lineNumber,
-          timeOnLine: prev.timeWeight,
-          costOnLine: prev.costWeight,
-        });
-        currentStation = prev.fromStation;
-      }
+        const current = priorityQueue.shift();
+        const { station, totalTime, transferCount, lineNumber, path } = current;
 
-      const pathTransfers = [];
-      rawPath.forEach((segment) => {
-        const lastTransfer = pathTransfers[pathTransfers.length - 1];
-        if (lastTransfer && lastTransfer.lineNumber === segment.lineNumber) {
-          lastTransfer.toStation = segment.toStation;
-          lastTransfer.timeOnLine += segment.timeOnLine;
-          lastTransfer.costOnLine += segment.costOnLine;
-        } else {
-          pathTransfers.push({ ...segment });
+        const visitKey = `${station}_${lineNumber}`;
+        if (visited.has(visitKey)) continue;
+        visited.add(visitKey);
+
+        // If destination is reached, add path to results
+        if (station === endStation) {
+          paths[endStation].push({ ...current });
+          continue;
         }
-      });
 
-      pathTransfers.forEach((transfer) => {
-        transfer.timeOnLine = LeastTransfersModel.formatTime(transfer.timeOnLine);
-        transfer.costOnLine = LeastTransfersModel.formatCost(transfer.costOnLine);
-      });
+        // Explore neighbors
+        this.graph[station].forEach(({ toNode, timeWeight, costWeight, lineNumber: nextLine }) => {
+          const isTransfer = lineNumber !== null && lineNumber !== nextLine ? 1 : 0;
+          const newTransferCount = transferCount + isTransfer;
+          const newTotalTime = totalTime + timeWeight;
 
-      const totalCostValue = pathTransfers.reduce(
-        (sum, transfer) => sum + parseInt(transfer.costOnLine.replace(/[^\d]/g, ''), 10),
-        0
-      );
+          // Push all possible paths to queue without overwriting previous paths
+          priorityQueue.push({
+            station: toNode,
+            totalTime: newTotalTime,
+            totalCost: current.totalCost + costWeight,
+            transferCount: newTransferCount,
+            lineNumber: nextLine,
+            path: [
+              ...path,
+              {
+                fromStation: station,
+                toStation: toNode,
+                lineNumber: nextLine,
+                timeOnLine: timeWeight,
+                costOnLine: costWeight,
+              },
+            ],
+          });
+        });
+      }
+
+      if (!paths[endStation] || paths[endStation].length === 0) {
+        throw new Error('No paths found between the specified stations.');
+      }
+
+      // Find minimum transfers
+      const minTransfers = Math.min(...paths[endStation].map((p) => p.transferCount));
+
+      // Filter paths with minimum transfers
+      const filteredPaths = paths[endStation].filter((p) => p.transferCount === minTransfers);
+
+      // Merge segments for display
+      const formattedPaths = filteredPaths.map(({ path, totalTime, totalCost }) => {
+        const mergedPath = [];
+        path.forEach((segment) => {
+          const lastSegment = mergedPath[mergedPath.length - 1];
+          if (lastSegment && lastSegment.lineNumber === segment.lineNumber) {
+            lastSegment.toStation = segment.toStation;
+            lastSegment.timeOnLine += segment.timeOnLine;
+            lastSegment.costOnLine += segment.costOnLine;
+          } else {
+            mergedPath.push({ ...segment });
+          }
+        });
+
+        return {
+          totalTime: LeastTransfersModel.formatTime(totalTime),
+          totalCost: LeastTransfersModel.formatCost(totalCost),
+          segments: mergedPath.map((segment) => ({
+            ...segment,
+            timeOnLine: LeastTransfersModel.formatTime(segment.timeOnLine),
+            costOnLine: LeastTransfersModel.formatCost(segment.costOnLine),
+          })),
+        };
+      });
 
       return {
         startStation,
         endStation,
-        totalTime: LeastTransfersModel.formatTime(distances[endStation]),
-        totalCost: LeastTransfersModel.formatCost(totalCostValue),
-        totalTransfers: transfers[endStation],
-        transfers: pathTransfers,
+        totalTransfers: minTransfers,
+        paths: formattedPaths,
       };
     } catch (error) {
-      console.error('❌ Error calculating least transfers path:', error.message);
-      throw new Error('Failed to calculate least transfers path.');
+      console.error('❌ Error calculating least transfers paths:', error.message);
+      throw new Error('Failed to calculate least transfers paths.');
     }
   }
 }

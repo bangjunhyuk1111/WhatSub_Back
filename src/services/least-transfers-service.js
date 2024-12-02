@@ -5,21 +5,31 @@ class LeastTransfersService {
     this.leastTransfersModel = new LeastTransfersModel();
   }
 
-  /**
-   * Calculate the path with the least transfers between two stations
-   * @param {Number} startStation - Starting station number
-   * @param {Number} endStation - Destination station number
-   * @returns {Object} - Least transfers path result
-   */
-  async calculateLeastTransfersPath(startStation, endStation) {
+  async calculateLeastTransfersPaths(startStation, endStation) {
     try {
-      return await this.leastTransfersModel.calculateLeastTransfersPath(
+      const result = await this.leastTransfersModel.calculateLeastTransfersPaths(
         startStation,
         endStation
       );
+
+      const uniquePaths = result.paths.filter((path, index, self) => {
+        const pathString = JSON.stringify(path.segments);
+        return (
+          self.findIndex(
+            (p) => JSON.stringify(p.segments) === pathString
+          ) === index
+        );
+      });
+
+      return {
+        startStation: result.startStation,
+        endStation: result.endStation,
+        totalTransfers: result.totalTransfers,
+        paths: uniquePaths,
+      };
     } catch (error) {
       console.error('❌ Error in LeastTransfersService:', error.message);
-      throw error;
+      throw new Error('Failed to calculate least transfers paths.');
     }
   }
 }
