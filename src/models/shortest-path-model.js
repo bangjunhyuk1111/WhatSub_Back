@@ -1,24 +1,42 @@
+const db = require('../../config/database.js');
 const GraphModel = require('./graph-model');
 
 class ShortestPathModel {
   constructor() {
-    this.graph = {}; // 그래프를 저장할 객체
+    this.graph = {};
+    this.stationInfo = {};
   }
 
-  async buildGraph() {
-    if (Object.keys(this.graph).length > 0) {
-      console.log('✅ Graph already built. Skipping rebuild.');
-      return this.graph;
+  /**
+   * Build the graph and fetch station info
+   */
+  async buildGraphAndStationInfo() {
+    if (Object.keys(this.graph).length > 0 && Object.keys(this.stationInfo).length > 0) {
+      return;
     }
 
     try {
       const graphModel = new GraphModel();
       this.graph = await graphModel.buildGraph();
-      console.log('✅ Graph successfully built.');
-      return this.graph;
+
+      const query = `
+        SELECT 
+          from_station_num AS stationNum,
+          MAX(toilet_num) AS toiletNum,
+          MAX(store_num) AS storeNum
+        FROM Stations
+        GROUP BY from_station_num
+      `;
+      const [rows] = await db.query(query);
+
+      rows.forEach(({ stationNum, toiletNum, storeNum }) => {
+        this.stationInfo[stationNum] = {
+          toilet_num: toiletNum || 0,
+          store_num: storeNum || 0,
+        };
+      });
     } catch (error) {
-      console.error('❌ Error building graph:', error.message);
-      throw new Error('Failed to build the graph.');
+      throw new Error('Failed to build the graph and fetch station info.');
     }
   }
 
@@ -35,20 +53,17 @@ class ShortestPathModel {
 
   async calculateShortestPath(startStation, endStation) {
     try {
-      await this.buildGraph();
+      await this.buildGraphAndStationInfo();
 
       const distances = {};
-      const costs = {};
       const previous = {};
       const visited = new Set();
       const priorityQueue = [];
 
       Object.keys(this.graph).forEach((node) => {
         distances[node] = Infinity;
-        costs[node] = Infinity;
       });
       distances[startStation] = 0;
-      costs[startStation] = 0;
 
       priorityQueue.push({ station: startStation, time: 0 });
 
@@ -63,11 +78,9 @@ class ShortestPathModel {
 
         this.graph[currentStation].forEach(({ toNode, timeWeight, costWeight, lineNumber }) => {
           const newTime = distances[currentStation] + timeWeight;
-          const newCost = costs[currentStation] + costWeight;
 
           if (newTime < distances[toNode]) {
             distances[toNode] = newTime;
-            costs[toNode] = newCost;
             previous[toNode] = { fromStation: currentStation, lineNumber, timeWeight, costWeight };
             priorityQueue.push({ station: toNode, time: newTime });
           }
@@ -97,7 +110,11 @@ class ShortestPathModel {
           lastTransfer.timeOnLine += segment.timeOnLine;
           lastTransfer.costOnLine += segment.costOnLine;
         } else {
-          transfers.push({ ...segment });
+          transfers.push({
+            ...segment,
+            toiletCount: this.stationInfo[segment.fromStation]?.toilet_num || 0,
+            storeCount: this.stationInfo[segment.fromStation]?.store_num || 0,
+          });
         }
       });
 
@@ -110,11 +127,12 @@ class ShortestPathModel {
         startStation,
         endStation,
         totalTime: ShortestPathModel.formatTime(distances[endStation]),
-        totalCost: ShortestPathModel.formatCost(costs[endStation]),
+        totalCost: ShortestPathModel.formatCost(
+          transfers.reduce((acc, transfer) => acc + parseInt(transfer.costOnLine.replace(/[^0-9]/g, '')), 0)
+        ),
         transfers,
       };
     } catch (error) {
-      console.error('❌ Error calculating shortest path:', error.message);
       throw new Error('Failed to calculate shortest path.');
     }
   }
