@@ -1,24 +1,43 @@
+const db = require('../../config/database.js');
 const GraphModel = require('./graph-model');
 
 class LeastTransfersModel {
   constructor() {
     this.graph = {};
+    this.stationInfo = {}; // 역 정보를 저장할 객체
   }
 
-  async buildGraph() {
-    if (Object.keys(this.graph).length > 0) {
-      console.log('✅ Graph already built. Skipping rebuild.');
-      return this.graph;
+  /**
+   * Build the graph and fetch station info
+   */
+  async buildGraphAndStationInfo() {
+    if (Object.keys(this.graph).length > 0 && Object.keys(this.stationInfo).length > 0) {
+      return;
     }
 
     try {
       const graphModel = new GraphModel();
       this.graph = await graphModel.buildGraph();
-      console.log('✅ Graph successfully built with bidirectional edges.');
-      return this.graph;
+
+      // Fetch station information (toilet and store count)
+      const query = `
+        SELECT 
+          from_station_num AS stationNum,
+          MAX(toilet_num) AS toiletNum,
+          MAX(store_num) AS storeNum
+        FROM Stations
+        GROUP BY from_station_num
+      `;
+      const [rows] = await db.query(query);
+
+      rows.forEach(({ stationNum, toiletNum, storeNum }) => {
+        this.stationInfo[stationNum] = {
+          toilet_num: toiletNum || 0,
+          store_num: storeNum || 0,
+        };
+      });
     } catch (error) {
-      console.error('❌ Error building graph:', error.message);
-      throw new Error('Failed to build the graph.');
+      throw new Error('Failed to build the graph and fetch station info.');
     }
   }
 
@@ -37,15 +56,14 @@ class LeastTransfersModel {
 
   async calculateLeastTransfersPaths(startStation, endStation) {
     try {
-      await this.buildGraph();
+      await this.buildGraphAndStationInfo();
 
       const distances = {};
       const transfers = {};
       const paths = {};
       const priorityQueue = [];
-      const visited = new Map(); // visited를 Map으로 사용하여 더 정확하게 추적
+      const visited = new Map();
 
-      // Initialize distances and transfers
       Object.keys(this.graph).forEach((station) => {
         distances[station] = Infinity;
         transfers[station] = Infinity;
@@ -70,7 +88,6 @@ class LeastTransfersModel {
         const { station, totalTime, transferCount, lineNumber, path } = current;
         const visitKey = `${station}_${lineNumber}`;
 
-        // 방문 처리: 해당 station과 lineNumber에 대한 경로가 이미 더 좋은 경로로 방문되었는지 확인
         if (visited.has(visitKey)) {
           const prev = visited.get(visitKey);
           if (prev.transferCount < transferCount || (prev.transferCount === transferCount && prev.totalTime <= totalTime)) {
@@ -80,19 +97,16 @@ class LeastTransfersModel {
 
         visited.set(visitKey, { transferCount, totalTime });
 
-        // 목적지에 도달한 경우, 경로를 저장
         if (station === endStation) {
           paths[endStation].push({ ...current });
           continue;
         }
 
-        // 이웃 노드를 탐색
         this.graph[station].forEach(({ toNode, timeWeight, costWeight, lineNumber: nextLine }) => {
           const isTransfer = lineNumber !== null && lineNumber !== nextLine ? 1 : 0;
           const newTransferCount = transferCount + isTransfer;
           const newTotalTime = totalTime + timeWeight;
 
-          // 경로 큐에 새로운 경로 추가
           priorityQueue.push({
             station: toNode,
             totalTime: newTotalTime,
@@ -107,12 +121,13 @@ class LeastTransfersModel {
                 lineNumber: nextLine,
                 timeOnLine: timeWeight,
                 costOnLine: costWeight,
+                toiletCount: this.stationInfo[station]?.toilet_num || 0,
+                storeCount: this.stationInfo[station]?.store_num || 0,
               },
             ],
           });
         });
 
-        // 우선순위 큐를 최소 환승, 최소 시간 기준으로 정렬
         priorityQueue.sort((a, b) => {
           if (a.transferCount === b.transferCount) {
             return a.totalTime - b.totalTime;
@@ -121,21 +136,14 @@ class LeastTransfersModel {
         });
       }
 
-      // 목적지에 도달할 수 없으면 예외 처리
       if (!paths[endStation] || paths[endStation].length === 0) {
         throw new Error('No paths found between the specified stations.');
       }
 
-      // 최소 환승 경로를 찾음
       const minTransfers = Math.min(...paths[endStation].map((p) => p.transferCount));
 
-      // 최소 환승 경로들만 필터링
       const filteredPaths = paths[endStation].filter((p) => p.transferCount === minTransfers);
 
-      // 경로가 잘 나오는지 확인하기 위한 디버깅 로그
-      console.log('Filtered Paths:', filteredPaths);
-
-      // 경로 합치기
       const formattedPaths = filteredPaths.map(({ path, totalTime, totalCost }) => {
         const mergedPath = [];
         path.forEach((segment) => {
@@ -160,7 +168,6 @@ class LeastTransfersModel {
         };
       });
 
-      // 최소 환승 경로들 반환
       return {
         startStation,
         endStation,
@@ -168,7 +175,6 @@ class LeastTransfersModel {
         paths: formattedPaths,
       };
     } catch (error) {
-      console.error('❌ Error calculating least transfers paths:', error.message);
       throw new Error('Failed to calculate least transfers paths.');
     }
   }

@@ -12,6 +12,9 @@ const db = require('../config/database.js');
 
 // 라우터 선언
 const graphRoutes = require('./routes/graph-route');
+const shortestPathRoute = require('./routes/shortest-path-route');
+const cheapestPathRoutes = require('./routes/cheapest-path-route');
+const leastTransfersRoutes = require('./routes/least-transfers-route');
 const combinedPathRoute = require('./routes/combined-path-route');
 
 // Express 앱 설정
@@ -40,7 +43,10 @@ app.get('/', async (req, res) => {
   res.send('라우터 작동함');
 });
 
-app.use('/graph', graphRoutes);
+app.use('/graph', graphRoutes); // 그래프 생성 확인 라우터
+app.use('/cheapest-path', cheapestPathRoutes); // 최소요금 경로 라우터
+app.use('/shortest-path', shortestPathRoute); // 최단거리 경로 라우터
+app.use('/least-transfers-path', leastTransfersRoutes); //최소환승 경로 라우터
 app.use('/combined-path', combinedPathRoute); // 통합된 라우터
 
 // 404 에러 처리 미들웨어
