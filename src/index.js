@@ -11,11 +11,11 @@ dotenv.config();
 const db = require('../config/database.js');
 
 // 라우터 선언
-const graphRoutes = require('./routes/graph-route');
-const shortestPathRoute = require('./routes/shortest-path-route');
-const cheapestPathRoutes = require('./routes/cheapest-path-route');
-const leastTransfersRoutes = require('./routes/least-transfers-route');
-const combinedPathRoute = require('./routes/combined-path-route');
+const graphRoutes = require('./routes/graph-route'); //그래프
+const shortestPathRoute = require('./routes/shortest-path-route'); //최소 시간
+const cheapestPathRoutes = require('./routes/cheapest-path-route'); //최소 비용
+const leastTransfersRoutes = require('./routes/least-transfers-route'); //최소 환승
+const combinedPathRoute = require('./routes/combined-path-route'); //뉴스
 
 // Express 앱 설정
 const app = express();
