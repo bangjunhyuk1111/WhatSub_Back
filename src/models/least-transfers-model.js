@@ -43,7 +43,7 @@ class LeastTransfersModel {
       const transfers = {};
       const paths = {};
       const priorityQueue = [];
-      const visited = new Set();
+      const visited = new Map(); // visited를 Map으로 사용하여 더 정확하게 추적
 
       // Initialize distances and transfers
       Object.keys(this.graph).forEach((station) => {
@@ -66,34 +66,33 @@ class LeastTransfersModel {
       });
 
       while (priorityQueue.length > 0) {
-        // Sort the priority queue by transfers and then by time
-        priorityQueue.sort((a, b) => {
-          if (a.transferCount === b.transferCount) {
-            return a.totalTime - b.totalTime;
-          }
-          return a.transferCount - b.transferCount;
-        });
-
         const current = priorityQueue.shift();
         const { station, totalTime, transferCount, lineNumber, path } = current;
-
         const visitKey = `${station}_${lineNumber}`;
-        if (visited.has(visitKey)) continue;
-        visited.add(visitKey);
 
-        // If destination is reached, add path to results
+        // 방문 처리: 해당 station과 lineNumber에 대한 경로가 이미 더 좋은 경로로 방문되었는지 확인
+        if (visited.has(visitKey)) {
+          const prev = visited.get(visitKey);
+          if (prev.transferCount < transferCount || (prev.transferCount === transferCount && prev.totalTime <= totalTime)) {
+            continue;
+          }
+        }
+
+        visited.set(visitKey, { transferCount, totalTime });
+
+        // 목적지에 도달한 경우, 경로를 저장
         if (station === endStation) {
           paths[endStation].push({ ...current });
           continue;
         }
 
-        // Explore neighbors
+        // 이웃 노드를 탐색
         this.graph[station].forEach(({ toNode, timeWeight, costWeight, lineNumber: nextLine }) => {
           const isTransfer = lineNumber !== null && lineNumber !== nextLine ? 1 : 0;
           const newTransferCount = transferCount + isTransfer;
           const newTotalTime = totalTime + timeWeight;
 
-          // Push all possible paths to queue without overwriting previous paths
+          // 경로 큐에 새로운 경로 추가
           priorityQueue.push({
             station: toNode,
             totalTime: newTotalTime,
@@ -112,19 +111,31 @@ class LeastTransfersModel {
             ],
           });
         });
+
+        // 우선순위 큐를 최소 환승, 최소 시간 기준으로 정렬
+        priorityQueue.sort((a, b) => {
+          if (a.transferCount === b.transferCount) {
+            return a.totalTime - b.totalTime;
+          }
+          return a.transferCount - b.transferCount;
+        });
       }
 
+      // 목적지에 도달할 수 없으면 예외 처리
       if (!paths[endStation] || paths[endStation].length === 0) {
         throw new Error('No paths found between the specified stations.');
       }
 
-      // Find minimum transfers
+      // 최소 환승 경로를 찾음
       const minTransfers = Math.min(...paths[endStation].map((p) => p.transferCount));
 
-      // Filter paths with minimum transfers
+      // 최소 환승 경로들만 필터링
       const filteredPaths = paths[endStation].filter((p) => p.transferCount === minTransfers);
 
-      // Merge segments for display
+      // 경로가 잘 나오는지 확인하기 위한 디버깅 로그
+      console.log('Filtered Paths:', filteredPaths);
+
+      // 경로 합치기
       const formattedPaths = filteredPaths.map(({ path, totalTime, totalCost }) => {
         const mergedPath = [];
         path.forEach((segment) => {
@@ -149,6 +160,7 @@ class LeastTransfersModel {
         };
       });
 
+      // 최소 환승 경로들 반환
       return {
         startStation,
         endStation,

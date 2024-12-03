@@ -10,11 +10,9 @@ const morgan = require('morgan');
 dotenv.config();
 const db = require('../config/database.js');
 
-// 라우터 선언 
+// 라우터 선언
 const graphRoutes = require('./routes/graph-route');
-const shortestPathRoute = require('./routes/shortest-path-route');
-const cheapestPathRoutes = require('./routes/cheapest-path-route');
-const leastTransfersRoutes = require('./routes/least-transfers-route');
+const combinedPathRoute = require('./routes/combined-path-route');
 
 // Express 앱 설정
 const app = express();
@@ -37,26 +35,31 @@ if (process.env.NODE_ENV === 'production') {
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-
-//라우터
+// 라우터
 app.get('/', async (req, res) => {
-  res.send('라우터 작동함')
-})
+  res.send('라우터 작동함');
+});
 
 app.use('/graph', graphRoutes);
-app.use('/shortest-path', shortestPathRoute);
-app.use('/cheapest-path', cheapestPathRoutes);
-app.use('/least-transfers-path', leastTransfersRoutes);
+app.use('/combined-path', combinedPathRoute); // 통합된 라우터
 
 // 404 에러 처리 미들웨어
 app.use((req, res, next) => {
-    const error = new Error(`${req.method} ${req.url} 라우터가 없습니다.`);
-    error.status = 404;
-    next(error);
+  const error = new Error(`${req.method} ${req.url} 라우터가 없습니다.`);
+  error.status = 404;
+  next(error);
+});
+
+// 에러 처리 미들웨어
+app.use((error, req, res, next) => {
+  res.status(error.status || 500).json({
+    message: error.message,
+    status: error.status || 500,
   });
+});
 
 // 서버 시작
-const port = 3000;
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
