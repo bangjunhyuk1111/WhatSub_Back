@@ -24,8 +24,14 @@
     "@babel/cli": "^7.25.9",
     "@babel/core": "^7.26.0",
     "@babel/preset-env": "^7.26.0",
+<<<<<<< HEAD
     "eslint": "^9.16.0",
     "lint-staged": "^15.2.10",
     "prettier": "^3.4.1"
+=======
+    "eslint": "^9.15.0",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3"
+>>>>>>> ea7852e07915272e8166fae61eae0bd027ba67a4
   }
 }
