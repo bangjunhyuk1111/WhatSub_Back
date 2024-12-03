@@ -17,6 +17,7 @@ const cheapestPathRoutes = require('./routes/cheapest-path-route'); //최소 비
 const leastTransfersRoutes = require('./routes/least-transfers-route'); //최소 환승
 const combinedPathRoute = require('./routes/combined-path-route'); //통합 경로
 const newsRoutes = require('./routes/news-route'); //뉴스
+const favoriteRoutes = require('./routes/favorite-route');
 
 // Express 앱 설정
 const app = express();
@@ -50,6 +51,7 @@ app.use('/shortest-path', shortestPathRoute); // 최단거리 경로 라우터
 app.use('/least-transfers-path', leastTransfersRoutes); //최소환승 경로 라우터
 app.use('/combined-path', combinedPathRoute); // 통합된 라우터
 app.use(newsRoutes);
+app.use(favoriteRoutes);
 
 // 404 에러 처리 미들웨어
 app.use((req, res, next) => {
