@@ -132,9 +132,12 @@ class ShortestCostModel {
       return {
         startStation,
         endStation,
-        totalCost: ShortestCostModel.formatCost(costs[endStation]),
-        totalTime: ShortestCostModel.formatTime(times[endStation]),
-        transfers,
+        paths: [{
+          totalTime: ShortestCostModel.formatTime(times[endStation]),
+          totalCost: ShortestCostModel.formatCost(costs[endStation]),
+          totalTransfers: transfers.length - 1, // 첫 번째 구간은 환승이 아니므로 1을 빼줌
+          segments: transfers,
+        }],
       };
     } catch (error) {
       throw new Error('Failed to calculate shortest cost path.');

@@ -103,9 +103,19 @@ class ShortestPathModel {
       }
 
       const transfers = [];
+      let lastLineNumber = null; // lastLineNumber 변수 추가
       rawPath.forEach((segment) => {
         const lastTransfer = transfers[transfers.length - 1];
-        if (lastTransfer && lastTransfer.lineNumber === segment.lineNumber) {
+
+        // 현재 segment의 lineNumber와 마지막 segment의 lineNumber가 다를 경우 환승이므로
+        if (lastLineNumber !== null && lastLineNumber !== segment.lineNumber) {
+          // 환승 횟수 증가
+          transfers.push({
+            ...segment,
+            toiletCount: this.stationInfo[segment.fromStation]?.toilet_num || 0,
+            storeCount: this.stationInfo[segment.fromStation]?.store_num || 0,
+          });
+        } else if (lastTransfer && lastTransfer.lineNumber === segment.lineNumber) {
           lastTransfer.toStation = segment.toStation;
           lastTransfer.timeOnLine += segment.timeOnLine;
           lastTransfer.costOnLine += segment.costOnLine;
@@ -116,6 +126,8 @@ class ShortestPathModel {
             storeCount: this.stationInfo[segment.fromStation]?.store_num || 0,
           });
         }
+
+        lastLineNumber = segment.lineNumber; // lastLineNumber 갱신
       });
 
       transfers.forEach((transfer) => {
@@ -123,14 +135,20 @@ class ShortestPathModel {
         transfer.costOnLine = ShortestPathModel.formatCost(transfer.costOnLine);
       });
 
+      // Total cost calculation
+      const totalCost = transfers.reduce((acc, transfer) => acc + parseInt(transfer.costOnLine.replace(/[^0-9]/g, '')), 0);
+
       return {
         startStation,
         endStation,
-        totalTime: ShortestPathModel.formatTime(distances[endStation]),
-        totalCost: ShortestPathModel.formatCost(
-          transfers.reduce((acc, transfer) => acc + parseInt(transfer.costOnLine.replace(/[^0-9]/g, '')), 0)
-        ),
-        transfers,
+        totalTransfers: transfers.length - 1, // 첫 번째 구간은 환승이 아니므로 1을 빼줌
+        paths: [
+          {
+            totalTime: ShortestPathModel.formatTime(distances[endStation]),
+            totalCost: ShortestPathModel.formatCost(totalCost),
+            segments: transfers,
+          },
+        ],
       };
     } catch (error) {
       throw new Error('Failed to calculate shortest path.');
