@@ -113,8 +113,8 @@ class ShortestCostModel {
         const lastTransfer = transfers[transfers.length - 1];
         if (lastTransfer && lastTransfer.lineNumber === segment.lineNumber) {
           lastTransfer.toStation = segment.toStation;
-          lastTransfer.costOnLine += segment.costOnLine;
           lastTransfer.timeOnLine += segment.timeOnLine;
+          lastTransfer.costOnLine += segment.costOnLine;
         } else {
           transfers.push({
             ...segment,
@@ -125,17 +125,17 @@ class ShortestCostModel {
       });
 
       transfers.forEach((transfer) => {
-        transfer.costOnLine = ShortestCostModel.formatCost(transfer.costOnLine);
         transfer.timeOnLine = ShortestCostModel.formatTime(transfer.timeOnLine);
+        transfer.costOnLine = ShortestCostModel.formatCost(transfer.costOnLine);
       });
 
       return {
         startStation,
         endStation,
+        totalTransfers: transfers.length - 1, // 첫 번째 구간은 환승이 아니므로 1을 빼줌
         paths: [{
           totalTime: ShortestCostModel.formatTime(times[endStation]),
           totalCost: ShortestCostModel.formatCost(costs[endStation]),
-          totalTransfers: transfers.length - 1, // 첫 번째 구간은 환승이 아니므로 1을 빼줌
           segments: transfers,
         }],
       };

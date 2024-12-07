@@ -46,11 +46,8 @@ router.get('/', async (req, res, next) => {
             leastTransfersService.calculateLeastTransfersPaths(start, end),
         ]);
 
-        // Check if paths are defined
-        const getPaths = (path) => path && path.paths ? path.paths : [];
-
-        // Variable to store the comparison result
-        let comparisonResult = 0;
+        // Helper function to extract paths
+        const getPaths = (path) => (path && path.paths ? path.paths : []);
 
         // Function to compare paths ignoring the metadata like totalTransfers, totalCost, etc.
         const comparePaths = (path1, path2) => {
@@ -77,23 +74,39 @@ router.get('/', async (req, res, next) => {
             return true;
         };
 
-        // Compare the paths and assign the appropriate value to comparisonResult
-        if (comparePaths(shortestPath, cheapestPath) && comparePaths(shortestPath, leastTransfersPath)) {
-            comparisonResult = 4; // All paths are the same
-        } else if (comparePaths(shortestPath, cheapestPath)) {
-            comparisonResult = 1; // Shortest and Cheapest paths are the same
-        } else if (comparePaths(shortestPath, leastTransfersPath)) {
-            comparisonResult = 2; // Shortest and Least Transfers paths are the same
-        } else if (comparePaths(cheapestPath, leastTransfersPath)) {
-            comparisonResult = 3; // Cheapest and Least Transfers paths are the same
-        }
+        // Array to store comparison results for each least transfer path
+        const comparisonResults = [];
 
-        // Combine the results with the comparison result
+        // Function to evaluate comparison result for a single least transfer path
+        const evaluateSinglePath = (leastTransferPath) => {
+            if (
+                comparePaths(shortestPath, cheapestPath) &&
+                comparePaths(shortestPath, leastTransferPath) &&
+                comparePaths(cheapestPath, leastTransferPath)
+            ) {
+                return 4; // All paths are the same
+            } else if (comparePaths(shortestPath, cheapestPath)) {
+                return 1; // Shortest and Cheapest paths are the same
+            } else if (comparePaths(shortestPath, leastTransferPath)) {
+                return 2; // Shortest and this Least Transfers path are the same
+            } else if (comparePaths(cheapestPath, leastTransferPath)) {
+                return 3; // Cheapest and this Least Transfers path are the same
+            }
+            return 0; // No overlap
+        };
+
+        // Evaluate each path in leastTransfersPath
+        getPaths(leastTransfersPath).forEach((path, index) => {
+            const result = evaluateSinglePath(path);
+            comparisonResults.push({ leastTransferPathIndex: index + 1, comparisonResult: result });
+        });
+
+        // Combine the results with the comparison results
         const combinedResult = {
             shortestPath,
             cheapestPath,
             leastTransfersPath,
-            comparisonResult, // Include comparison result in the response
+            comparisonResults, // Include comparison results for each least transfer path
         };
 
         // Respond with the combined data
