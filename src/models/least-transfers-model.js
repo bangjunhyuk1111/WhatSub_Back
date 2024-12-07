@@ -1,25 +1,30 @@
 const db = require('../../config/database.js');
 const GraphModel = require('./graph-model');
 
+/**
+ * LeastTransfersModel
+ * 모델: 최소 환승 경로 계산 알고리즘 처리
+ */
 class LeastTransfersModel {
   constructor() {
-    this.graph = {};
-    this.stationInfo = {}; // 역 정보를 저장할 객체
+    this.graph = {}; // 그래프 데이터를 저장
+    this.stationInfo = {}; // 역 정보를 저장
   }
 
   /**
-   * Build the graph and fetch station info
+   * 그래프 및 역 정보를 초기화
+   * - 그래프는 역 간 연결 정보를 포함
+   * - 역 정보에는 화장실 및 상점 개수가 포함
    */
   async buildGraphAndStationInfo() {
     if (Object.keys(this.graph).length > 0 && Object.keys(this.stationInfo).length > 0) {
-      return;
+      return; // 이미 초기화된 경우 다시 초기화하지 않음
     }
 
     try {
       const graphModel = new GraphModel();
       this.graph = await graphModel.buildGraph();
 
-      // Fetch station information (toilet and store count)
       const query = `
         SELECT 
           from_station_num AS stationNum,
@@ -37,10 +42,14 @@ class LeastTransfersModel {
         };
       });
     } catch (error) {
-      throw new Error('Failed to build the graph and fetch station info.');
+      console.error('❌ 그래프 및 역 정보 초기화 중 오류 발생:', error.message);
+      throw new Error('그래프 및 역 정보를 초기화하는 데 실패했습니다.');
     }
   }
 
+  /**
+   * 시간을 시/분/초 형식으로 변환
+   */
   static formatTime(seconds) {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -50,10 +59,19 @@ class LeastTransfersModel {
       : `${minutes}분 ${remainingSeconds}초`;
   }
 
+  /**
+   * 비용을 한국 통화 형식으로 변환
+   */
   static formatCost(cost) {
     return `${cost.toLocaleString('ko-KR')}원`;
   }
 
+  /**
+   * 최소 환승 경로를 계산
+   * @param {number} startStation - 출발역 번호
+   * @param {number} endStation - 도착역 번호
+   * @returns {Object} 최소 환승 경로 데이터
+   */
   async calculateLeastTransfersPaths(startStation, endStation) {
     try {
       await this.buildGraphAndStationInfo();
@@ -137,11 +155,10 @@ class LeastTransfersModel {
       }
 
       if (!paths[endStation] || paths[endStation].length === 0) {
-        throw new Error('No paths found between the specified stations.');
+        throw new Error('출발역과 도착역 사이에 경로가 없습니다.');
       }
 
       const minTransfers = Math.min(...paths[endStation].map((p) => p.transferCount));
-
       const filteredPaths = paths[endStation].filter((p) => p.transferCount === minTransfers);
 
       const formattedPaths = filteredPaths.map(({ path, totalTime, totalCost }) => {
@@ -175,7 +192,8 @@ class LeastTransfersModel {
         paths: formattedPaths,
       };
     } catch (error) {
-      throw new Error('Failed to calculate least transfers paths.');
+      console.error('❌ 최소 환승 경로 계산 중 오류 발생:', error.message);
+      throw new Error('최소 환승 경로를 계산하는 데 실패했습니다.');
     }
   }
 }

@@ -5,7 +5,8 @@ const router = express.Router();
 
 /**
  * GET /shortest-path
- * Query Parameters: startStation, endStation
+ * 쿼리 매개변수: startStation, endStation
+ * 설명: 출발역(startStation)과 도착역(endStation)을 기반으로 최단 경로를 계산합니다.
  */
 router.get('/', ShortestPathController.getShortestPath);
 

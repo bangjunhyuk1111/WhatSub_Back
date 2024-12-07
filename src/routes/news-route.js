@@ -1,9 +1,11 @@
-// src/routes/newsRoutes.js
 const express = require('express');
 const router = express.Router();
-const newsController = require('../controllers/news-controller'); // src/controllers 경로로 수정
+const newsController = require('../controllers/news-controller'); // Controller 호출
 
-// 뉴스 가져오기
+/**
+ * GET /news
+ * 모든 뉴스 데이터를 가져오는 경로
+ */
 router.get('/news', newsController.getNews);
 
 module.exports = router;

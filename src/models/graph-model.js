@@ -1,12 +1,16 @@
 const db = require('../../config/database.js');
 
+/**
+ * GraphModel
+ * 데이터베이스에서 그래프 데이터를 가져와 그래프를 생성하는 모델
+ */
 class GraphModel {
   constructor() {
-    this.graph = {};
+    this.graph = {}; // 그래프 구조를 저장하는 객체
   }
 
   /**
-   * Fetch all edges from the Stations table
+   * Stations 테이블에서 모든 간선 데이터를 가져옴
    */
   async fetchEdges() {
     try {
@@ -21,35 +25,35 @@ class GraphModel {
         FROM Stations
       `;
       const [rows] = await db.query(query);
-      return rows;
+      return rows; // 간선 데이터 반환
     } catch (error) {
-      console.error('❌ Error fetching station edges:', error.message);
-      throw error;
+      console.error('❌ 역 간선 데이터를 가져오는 중 오류 발생:', error.message);
+      throw new Error('역 간선 데이터를 가져오는 데 실패했습니다.');
     }
   }
 
   /**
-   * Build the graph from the fetched edges
+   * 가져온 간선 데이터를 기반으로 그래프를 생성
    */
   async buildGraph() {
     try {
       const edges = await this.fetchEdges();
 
       edges.forEach(({ fromNode, toNode, timeWeight, distanceWeight, costWeight, lineNumber }) => {
-        // Add edge in forward direction
+        // 정방향 간선 추가
         if (!this.graph[fromNode]) this.graph[fromNode] = [];
         this.graph[fromNode].push({ toNode, timeWeight, distanceWeight, costWeight, lineNumber });
 
-        // Add reverse edge for bidirectional graph
+        // 역방향 간선 추가 (양방향 그래프)
         if (!this.graph[toNode]) this.graph[toNode] = [];
         this.graph[toNode].push({ toNode: fromNode, timeWeight, distanceWeight, costWeight, lineNumber });
       });
 
-      console.log('✅ Graph successfully built.');
-      return this.graph;
+      console.log('✅ 그래프가 성공적으로 생성되었습니다.');
+      return this.graph; // 생성된 그래프 반환
     } catch (error) {
-      console.error('❌ Error building graph:', error.message);
-      throw error;
+      console.error('❌ 그래프 생성 중 오류 발생:', error.message);
+      throw new Error('그래프 생성에 실패했습니다.');
     }
   }
 }

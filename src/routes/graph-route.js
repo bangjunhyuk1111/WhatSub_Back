@@ -6,14 +6,14 @@ const router = express.Router();
 /**
  * Route: Initialize Graph
  * Method: POST
- * Description: Build the graph and store it in memory
+ * Description: 그래프를 생성하고 메모리에 저장
  */
 router.get('/initialize', GraphController.initializeGraph);
 
 /**
  * Route: Get Graph State
  * Method: GET
- * Description: Fetch the current graph structure
+ * Description: 현재 그래프 구조를 조회
  */
 router.get('/state', GraphController.getGraphState);
 

@@ -43,15 +43,20 @@ app.use(express.urlencoded({ extended: false }));
 // 라우터
 app.get('/', async (req, res) => {
   res.send('라우터 작동함');
-});
+}); // 라우터 작동확인
 
-app.use('/graph', graphRoutes); // 그래프 생성 확인 라우터
 app.use('/cheapest-path', cheapestPathRoutes); // 최소요금 경로 라우터
-app.use('/shortest-path', shortestPathRoute); // 최단거리 경로 라우터
+//http://whatsub-env-2.eba-wjpixdy5.ap-northeast-2.elasticbeanstalk.com/cheapest-path?startStation=118&endStation=605
+app.use('/shortest-path', shortestPathRoute); // 최단시간 경로 라우터
+//http://whatsub-env-2.eba-wjpixdy5.ap-northeast-2.elasticbeanstalk.com/shortest-path?startStation=102&endStation=201
 app.use('/least-transfers-path', leastTransfersRoutes); //최소환승 경로 라우터
+//http://whatsub-env-2.eba-wjpixdy5.ap-northeast-2.elasticbeanstalk.com/least-transfers-path?startStation=118&endStation=605
 app.use('/combined-path', combinedPathRoute); // 통합된 라우터
-app.use(newsRoutes);
-app.use(favoriteRoutes);
+//http://whatsub-env-2.eba-wjpixdy5.ap-northeast-2.elasticbeanstalk.com/combined-path?startStation=102&endStation=201
+app.use(newsRoutes); //뉴스 기능 라우터
+//http://whatsub-env-2.eba-wjpixdy5.ap-northeast-2.elasticbeanstalk.com/news
+app.use(favoriteRoutes); //즐겨찾기 기능 라우터
+app.use('/graph', graphRoutes); // 그래프 생성 확인 라우터
 
 // 404 에러 처리 미들웨어
 app.use((req, res, next) => {
