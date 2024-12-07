@@ -64,11 +64,93 @@ const CombinedPathController = {
         },
       };
 
+      // 경로 중복 비교
+      let areEqual1 = false;
+      let areEqual2 = false;
+      let areEqual3 = false;
+
+      // JSON.stringify()를 사용하여 객체의 내용을 문자열로 변환하여 비교
+      if (JSON.stringify(cheapestPath.paths[0]) === JSON.stringify(shortestPath.paths[0])) {
+        areEqual1 = true;
+      }
+
+      if (JSON.stringify(cheapestPath.paths[0]) === JSON.stringify(leastTransfersPath.paths[0])) {
+        areEqual2 = true;
+      }
+
+      if (JSON.stringify(shortestPath.paths[0]) === JSON.stringify(leastTransfersPath.paths[0])) {
+        areEqual3 = true;
+      }
+
+      let comparisonResults = [];
+
+      if (leastTransfersPath.paths.length === 1) {
+        // leastTransfersPath가 1개일 때
+        if (areEqual1 && !areEqual2 && !areEqual3) {
+          comparisonResults[0] = 1;
+        } else if (areEqual2 && !areEqual1 && !areEqual3) {
+          comparisonResults[0] = 2;
+        } else if (areEqual3 && !areEqual2 && !areEqual1) {
+          comparisonResults[0] = 3;
+        } else if (areEqual1 && areEqual2 && areEqual3) {
+          comparisonResults[0] = 4;
+        } else {
+          comparisonResults[0] = 0;
+        }
+      } else if (leastTransfersPath.paths.length === 2) {
+        // leastTransfersPath가 2개일 때
+        // 첫 번째 경로 비교
+        if (areEqual1 && !areEqual2 && !areEqual3) {
+          comparisonResults[0] = 1;
+        } else if (areEqual2 && !areEqual1 && !areEqual3) {
+          comparisonResults[0] = 2;
+        } else if (areEqual3 && !areEqual2 && !areEqual1) {
+          comparisonResults[0] = 3;
+        } else if (areEqual1 && areEqual2 && areEqual3) {
+          comparisonResults[0] = 4;
+        } else {
+          comparisonResults[0] = 0;
+        }
+
+        // 두 번째 경로 비교
+        let areEqual2nd1 = false;
+        let areEqual2nd2 = false;
+        let areEqual2nd3 = false;
+
+        if (JSON.stringify(cheapestPath.paths[0]) === JSON.stringify(shortestPath.paths[0])) {
+          areEqual2nd1 = true;
+        }
+
+        if (JSON.stringify(cheapestPath.paths[0]) === JSON.stringify(leastTransfersPath.paths[1])) {
+          areEqual2nd2 = true;
+        }
+
+        if (JSON.stringify(shortestPath.paths[0]) === JSON.stringify(leastTransfersPath.paths[1])) {
+          areEqual2nd3 = true;
+        }
+
+        if (areEqual2nd1 && !areEqual2nd2 && !areEqual2nd3) {
+          comparisonResults[1] = 1;
+        } else if (areEqual2nd2 && !areEqual2nd1 && !areEqual2nd3) {
+          comparisonResults[1] = 2;
+        } else if (areEqual2nd3 && !areEqual2nd1 && !areEqual2nd2) {
+          comparisonResults[1] = 3;
+        } else if (areEqual2nd1 && areEqual2nd2 && areEqual2nd3) {
+          comparisonResults[1] = 4;
+        } else {
+          comparisonResults[1] = 0;
+        }
+      } else {
+        comparisonResults[0] = 0;
+        comparisonResults[1] = 0;
+      }
+
       // 응답 반환
       return res.status(StatusCodes.OK).json({
         status: StatusCodes.OK,
         message: '경로가 성공적으로 계산되었습니다.',
         data: combinedResult,
+        comparisonResults,
       });
     } catch (error) {
       console.error('❌ 경로 계산 중 오류 발생:', error.message);
