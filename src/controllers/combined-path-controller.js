@@ -52,15 +52,15 @@ const CombinedPathController = {
       const combinedResult = {
         shortestPath: {
           status: StatusCodes.OK,
-          data: shortestPath,
+          shortestPath,
         },
         cheapestPath: {
           status: StatusCodes.OK,
-          data: cheapestPath,
+          cheapestPath,
         },
         leastTransfersPath: {
           status: StatusCodes.OK,
-          data: leastTransfersPath,
+          leastTransfersPath,
         },
       };
 
@@ -147,9 +147,7 @@ const CombinedPathController = {
 
       // 응답 반환
       return res.status(StatusCodes.OK).json({
-        status: StatusCodes.OK,
-        message: '경로가 성공적으로 계산되었습니다.',
-        data: combinedResult,
+        combinedResult,
         comparisonResults,
       });
     } catch (error) {
